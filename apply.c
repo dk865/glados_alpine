@@ -424,6 +424,7 @@ int main() {
         #ifdef _WIN32
         system("ping 127.0.0.1 -n 2 > NUL");
         #else
+        system("ping -c 2 127.0.0.1");
         system("sleep 1");
         #endif
         return 0;

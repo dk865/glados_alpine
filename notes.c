@@ -1,7 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "glados.h"
+#include <string.h>
 
+// Function to clear the screen depending on the OS
+void clear() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+// Function to pause and wait for user input before continuing
 void more() {
     printf("[MORE]");
     getchar();
@@ -53,3 +63,4 @@ int main() {
     clear();
     return 0;
 }
+

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <unistd.h>  // For sleep
 #include "glados.h"
 
 #ifdef _WIN32
@@ -11,11 +12,11 @@
 #define play_portal() system("start https://www.youtube.com/watch?v=KLfJQkIJy58")
 #define run_exec(exec) system(exec)
 #else
-#define reset() printf("\x1b[0;0m")
-#define set_color() printf("\x1b[0;32m")
-#define play_logout() system("aplay logout.wav -q")
-#define play_portal() system("xdg-open https://www.youtube.com/watch?v=KLfJQkIJy58")
-#define run_exec(exec) system("./"exec)
+#define reset() printf("\x1b[0;0m") // Reset terminal color
+#define set_color() printf("\x1b[0;32m") // Set terminal color to green
+#define play_logout() system("aplay logout.wav -q") // Use 'aplay' for sound (common in Linux)
+#define play_portal() system("aplay portal_sound.wav -q") // Play portal sound (no browser)
+#define run_exec(exec) system("./" exec) // Run an executable in the current directory
 #endif
 
 bool logout_signal = false;
@@ -24,15 +25,39 @@ void logout() {
     logout_signal = true;
 }
 
+void clear_screen() {
+    printf("\033[H\033[J"); // ANSI escape code to clear the screen
+}
+
+// Function to convert string to uppercase
+void to_upper_case(char *str) {
+    for (int i = 0; str[i]; i++) {
+        str[i] = toupper((unsigned char)str[i]);
+    }
+}
+
 void process_glados_command(char *command, char *arg, bool is_cave) {
-    command[strlen(command)-1] = 0;
-    clear();
+    command[strlen(command)-1] = 0; // Remove newline character
+    to_upper_case(command); // Convert command to uppercase
+    clear_screen(); // Clear the screen before printing the response
     if (is_cave) {
         printf("GLaDOS v1.07a (c) 1982 Aperture Science, Inc.\n\n\n");
     } else {
         printf("GLaDOS v1.07 (c) 1982 Aperture Science, Inc.\n\n\n");
     }
-    if (streq(command, "HELP") || streq(command, "LIB")) {
+
+    // Shell command to execute system commands
+    if (streq(command, "SHELL")) {
+        if (arg == NULL) {
+            printf("\nERROR 10 [No command specified for SHELL]\n\n\n");
+        } else {
+            printf("Executing: %s\n", arg);
+            int ret = system(arg);  // Execute the user-provided command
+            if (ret != 0) {
+                printf("\nERROR 11 [Failed to execute command]\n\n\n");
+            }
+        }
+    } else if (streq(command, "HELP") || streq(command, "LIB")) {
         printf("LIB\n");
         printf("   APPEND\n   ATTRIB\n   COPY\n   DIR\n   ERASE\n   FORMAT\n   INTERROGATE\n   LIB\n   PLAY\n   RENAME\n   TAPEDISK\n\n\n");
     } else if (streq(command, "APPEND") || streq(command, "ATTRIB") || streq(command, "COPY") || streq(command, "ERASE") || streq(command, "FORMAT") || streq(command, "RENAME")) {
@@ -57,6 +82,8 @@ void process_glados_command(char *command, char *arg, bool is_cave) {
         } else if (streq(arg, "PORTAL")) {
             logout();
             play_portal();
+            sleep(5); // Wait for 5 seconds before shutting down
+            system("shutdown -h now"); // Shut down the system
         }
     } else if (streq(command, "TAPEDISK")) {
         printf("\nERROR 18 [User not authorized to transfer system tapes]\n\n\n");
@@ -74,12 +101,12 @@ void process_glados_command(char *command, char *arg, bool is_cave) {
 }
 
 void glados(bool is_cave) {
-    clear();
+    clear_screen(); // Clear screen before printing GLaDOS banner
     printf("GLaDOS v1.07 (c) 1982 Aperture Science, Inc.\n\n\n");
     char command[STRING_BUFFER_SIZE];
     while (1) {
         if (logout_signal) {
-            clear();
+            clear_screen();
             play_logout();
             break;
         }
@@ -95,32 +122,32 @@ void glados(bool is_cave) {
 
 void process_command(char *command) {
     if (streq(command, "HELP")) {
-        clear();
+        clear_screen();
         printf("If this is an actual plea for help in response to a hazardous material spill, an explosion, a fire on your person,\n");
         printf("radiation poisoning, a choking gas of unknown origin, eye trauma resulting from the use of an emergency eye\n");
         printf("wash station on floors three, four, or eleven, in an animal malfunction, or any other injurious experimental equipment\n");
         printf("faliure, please remain at your workstation. A Crisis Response Team has already been mobilized to deliberate on a response to your crisis.\n\n\n");
         printf("If you need help accessing the system, please refer to your User Handbook.\n\n\n");
-    } else if (streq(command, "LOGIN") || streq(command, "LOGIN") || streq(command, "USER")) { 
+    } else if (streq(command, "LOGIN") || streq(command, "USER")) { 
         char username[STRING_BUFFER_SIZE];
         char password[STRING_BUFFER_SIZE];
-        clear();
+        clear_screen();
+password_entry:
         printf("Username>");
         fgets(username, sizeof(username), stdin);
-        clear();
-password_entry:
+        clear_screen();
         printf("Password>");
         fgets(password, sizeof(password), stdin);
         bool is_cave = false;
         if (streq(username, "CJOHNSON")) is_cave = true;
         if ((!streq(password, "PORTAL") && !streq(password, "PORTALS") && !is_cave) || (is_cave && !streq(password, "TIER3"))) {
-            clear();
+            clear_screen();
             printf("ERROR 07 [Incorrect Password]\n\n\n");
             goto password_entry;
         }
         glados(is_cave);
     } else {
-        printf("\033[1K");
+        printf("\033[1K"); // Clear the current line (for nice prompt updates)
     }
 }
 
@@ -134,13 +161,14 @@ void command_prompt() {
 }
 
 void reset_on_exit() {
-    reset();
+    reset(); // Reset terminal color before exiting
 }
 
 int main() {
-    atexit(reset_on_exit);
-    clear();
-    set_color();
-    command_prompt();
+    atexit(reset_on_exit); // Register exit handler
+    clear_screen(); // Clear screen before starting
+    set_color(); // Set the color for the terminal
+    command_prompt(); // Start the command prompt loop
     return 0;
 }
+

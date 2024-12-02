@@ -1,16 +1,15 @@
-LINUXCC=gcc
-WIN32CC=x86_64-w64-mingw32-gcc
+# Compiler and flags for Alpine Linux
+CC=gcc
 CFLAGS=-Wall -Werror
 
-%:%.c
-	$(LINUXCC) $^ -o $@ $(CFLAGS)
+# Targets for building
+TARGETS=glados apply notes
 
-%.exe:%.c
-	$(WIN32CC) $^ -o $@ $(CFLAGS)
+# Build rule for all targets
+$(TARGETS): %: %.c
+	$(CC) $^ -o $@ $(CFLAGS)
 
-linux: glados notes apply
-windows: glados.exe notes.exe apply.exe
-
+# Clean up build artifacts
 clean:
-	rm -f apply glados notes
-	rm -f apply.exe glados.exe notes.exe
+	rm -f $(TARGETS)
+
