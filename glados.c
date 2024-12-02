@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <stdbool.h>
-#include <unistd.h>  // For sleep
+#include <unistd.h>
 #include "glados.h"
 
 #ifdef _WIN32
